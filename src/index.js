@@ -17,21 +17,44 @@ const pool = new Pool({
 
 //api
 
-app.post('/create', (req, res) => {
-    const { nome, quantidade, detalhes } = req.body
-    if (!nome || !quantidade || !detalhes) {
-        return res.status(400).json({ error: "tá faltando nome, quantidade ou detalhes..." }).send()
-    }
-    pool.query(
-        `INSERT INTO pedidos (nome, quantidade, detalhes) VALUES ($1, $2, $3) RETURNING *;`,
-        [nome, quantidade, detalhes],
-        (error, results) => {
-          if (error) {
-            throw error
-          }
-          res.status(200).json({message: "novo pedido realizado!"}).send()
-        }
-      )
+const queryFotos = (fotos) => {
+  if (fotos.length === 1) {
+    return "(pedido_key, blob_one) VALUES ($1, $2)";
+  } else if (fotos.length === 2) {
+    return "(pedido_key, blob_one, blob_two) VALUES ($1, $2, $3)"
+  } else if (fotos.length === 3) { 
+    return "(pedido_key, blob_one, blob_two, blob_three) VALUES ($1, $2, $3, $4)"
+  }
+}
+
+app.post('/create', async(req, res) => {
+  const { nome, quantidade, detalhes, fotos } = req.body
+  console.log(JSON.stringify(fotos))
+  let lista_de_fotos = []
+  for (foto of fotos) { 
+    lista_de_fotos.push(foto)
+  }
+  if (!nome || !quantidade || !detalhes || !fotos) {
+    return res.status(400).json({ error: "tá faltando nome, quantidade ou detalhes..." }).send()
+  }
+  await pool.query(
+    `INSERT INTO pedidos (nome, quantidade, detalhes) VALUES ($1, $2, $3) RETURNING id;`,
+    [nome, quantidade, detalhes],
+    (error, results) => {
+      if (error) { console.log(error) }      
+      const insertedId = results.rows[0].id;
+      lista_de_fotos.unshift(insertedId)
+    })
+  console.log('foi um')
+  await pool.query(
+    `INSERT INTO fotos ${queryFotos(fotos)}`,
+    lista_de_fotos,
+    (error, results) => {
+      console.log('dentro da query')
+      if (error) { console.log(lista_de_fotos); console.log(error) }
+    })
+  res.status(200).json({ message: "deu certo!" })
+  console.log('foi dois')
 })
 
 app.get('/pedidos', (req, res) => {
