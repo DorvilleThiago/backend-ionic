@@ -2,11 +2,18 @@ const express = require('express')
 const cors = require('cors')
 const app = express()
 const port = 9000
+const bodyParser = require('body-parser')
+const multer = require('multer');
 
 app.use(cors({
   origin: "*"
 }))
 app.use(express.json());
+
+app.use(bodyParser.urlencoded({ extended: true }));
+
+const upload = multer({ dest: 'uploads/' });
+
 
 const Pool = require('pg').Pool
 const pool = new Pool({
@@ -31,9 +38,9 @@ const queryFotos = (fotos) => {
 
 app.post('/create', async(req, res) => {
 
-  const { nome, quantidade, detalhes, fotos } = req.body
+  console.log(req.files);
 
-  let lista_de_fotos = []
+ /*  let lista_de_fotos = []
 
   for (foto of fotos) { 
     lista_de_fotos.push(foto.blob)
@@ -58,7 +65,7 @@ app.post('/create', async(req, res) => {
     res.status(200).json({ message: "deu certo!" })
   } catch (err) {
     console.log(err)
-  }
+  } */
 })
 
 app.get('/pedidos', (req, res) => {
