@@ -57,19 +57,23 @@ app.post('/create', upload.array('mergedFoto'), async(req, res) => {
 app.get('/pedidos', (req, res) => {
   pool.query(`
   SELECT
-  p.*,
-  (
-    SELECT array_agg(foto)
-    FROM fotos
-    WHERE pedido_id = p.id
-  ) AS fotos
-  FROM pedidos p;
+  id,
+  nome,
+  quantidade,
+  detalhes
+  FROM pedidos;
 `, (error, results) => {
         if (error) {
             throw error
         }
         res.status(200).json(results.rows)
     })
+})
+
+app.get('/fotos/:id', async(req, res) => { 
+  const id = req.params.id
+  const results = await pool.query(`SELECT foto FROM fotos WHERE pedido_id = '${id}'`)
+  res.status(200).json(results.rows)
 })
 
 //listen
