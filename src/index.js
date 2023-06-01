@@ -8,11 +8,9 @@ const multer = require('multer');
 app.use(cors({
   origin: "*"
 }))
-app.use(express.json());
 
-app.use(bodyParser.urlencoded({ extended: true }));
-
-const upload = multer({ dest: 'uploads/' });
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 
 const Pool = require('pg').Pool
@@ -26,27 +24,14 @@ const pool = new Pool({
 
 //api
 
-const queryFotos = (fotos) => {
-  if (fotos.length === 1) {
-    return "(pedido_key, blob_one) VALUES ($1, $2);";
-  } else if (fotos.length === 2) {
-    return "(pedido_key, blob_one, blob_two) VALUES ($1, $2, $3);"
-  } else if (fotos.length === 3) { 
-    return "(pedido_key, blob_one, blob_two, blob_three) VALUES ($1, $2, $3, $4);"
-  }
-}
+app.post('/create', upload.array('mergedFoto'), async(req, res) => {
 
-app.post('/create', async(req, res) => {
+  const { nome, quantidade, detalhes } = req.body;
+  const files = req.files;
 
-  console.log(req.files);
+  console.log(nome,quantidade,detalhes,files);
 
- /*  let lista_de_fotos = []
-
-  for (foto of fotos) { 
-    lista_de_fotos.push(foto.blob)
-  }
-
-  if (!nome || !quantidade || !detalhes || !fotos) {
+  if (!nome || !quantidade || !detalhes || !files) {
     return res.status(400).json({ error: "tá faltando nome, quantidade ou detalhes..." }).send()
   }
   
@@ -55,35 +40,31 @@ app.post('/create', async(req, res) => {
     [nome, quantidade, detalhes])
   
   const insertedId = result.rows[0].id;
-  lista_de_fotos.unshift(insertedId)
 
   try {
-    console.log("INSERT INTO fotos "+queryFotos(fotos))
-    await pool.query(
-      `INSERT INTO fotos ${queryFotos(fotos)}`,
-      [...lista_de_fotos])
+    files.forEach(async (foto) => {
+      await pool.query(
+        `INSERT INTO fotos (pedido_id, foto) VALUES ($1, $2);`,
+        [insertedId, foto.buffer])
+      console.log('foi')
+    }) 
+    } catch (e) {
+      console.log(e)
+    }
     res.status(200).json({ message: "deu certo!" })
-  } catch (err) {
-    console.log(err)
-  } */
-})
+  })
 
 app.get('/pedidos', (req, res) => {
   pool.query(`
   SELECT
-  P.id,
-  P.nome,
-  P.quantidade,
-  P.detalhes,
-  F.blob_one,
-  F.blob_two,
-  F.blob_three
-  FROM 
-    pedidos P
-  INNER JOIN 
-    fotos F
-  ON 
-  P.id = F.pedido_key;`, (error, results) => {
+  p.*,
+  (
+    SELECT array_agg(foto)
+    FROM fotos
+    WHERE pedido_id = p.id
+  ) AS fotos
+  FROM pedidos p;
+`, (error, results) => {
         if (error) {
             throw error
         }
