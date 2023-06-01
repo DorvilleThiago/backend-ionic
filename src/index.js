@@ -72,7 +72,7 @@ app.get('/pedidos', (req, res) => {
 
 app.get('/fotos/:id', async(req, res) => { 
   const id = req.params.id
-  const results = await pool.query(`SELECT foto FROM fotos WHERE pedido_id = '${id}'`)
+  const results = await pool.query(`SELECT foto, pedido_id FROM fotos WHERE pedido_id = '${id}'`)
   res.status(200).json(results.rows)
 })
 
