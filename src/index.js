@@ -6,7 +6,8 @@ const bodyParser = require('body-parser')
 const multer = require('multer');
 
 app.use(cors({
-  origin: "*"
+  origin: "*",         //access-control-allow-credentials:true
+  optionSuccessStatus:200,
 }))
 
 const storage = multer.memoryStorage();
