@@ -1,9 +1,11 @@
 const express = require('express')
 const cors = require('cors')
 const app = express()
-const port = 9000
+const port = 10000
 const bodyParser = require('body-parser')
 const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
 
 app.use(cors({
   origin: "*",         //access-control-allow-credentials:true
@@ -25,7 +27,7 @@ const pool = new Pool({
 
 //api
 
-app.post('/create', upload.array('mergedFoto'), async(req, res) => {
+app.post('/create', upload.any('mergedFoto'), async(req, res) => {
 
   const { nome, quantidade, detalhes } = req.body;
   const files = req.files;
@@ -41,27 +43,36 @@ app.post('/create', upload.array('mergedFoto'), async(req, res) => {
     [nome, quantidade, detalhes])
   
   const insertedId = result.rows[0].id;
-
+  const imageDirectory = path.join(__dirname, 'images');
+  if (!fs.existsSync(imageDirectory)) {
+    fs.mkdirSync(imageDirectory);
+  }
   try {
-    files.forEach(async (foto) => {
-      await pool.query(
-        `INSERT INTO fotos (pedido_id, foto) VALUES ($1, $2);`,
-        [insertedId, foto.buffer])
-      console.log('foi')
-    }) 
-    } catch (e) {
-      console.log(e)
-    }
+    const fileName = `${insertedId}.jpg`;
+    const targetPath = path.join(__dirname, 'images', fileName);
+
+    fs.writeFile(targetPath, req.files[0].buffer, (err) => {
+      if (err) {
+        console.error(err);
+        throw err;
+      }
+      console.log('File saved:', targetPath);
+    });
+  } catch (err) {
+    console.error(err);
+  }
     res.status(200).json({ message: "deu certo!" })
   })
 
 app.get('/pedidos', (req, res) => {
+  console.log('pedidos!!!')
   pool.query(`
   SELECT
   id,
   nome,
   quantidade,
-  detalhes
+  detalhes,
+  data
   FROM pedidos;
 `, (error, results) => {
         if (error) {
@@ -71,11 +82,15 @@ app.get('/pedidos', (req, res) => {
     })
 })
 
-app.get('/fotos/:id', async(req, res) => { 
-  const id = req.params.id
-  const results = await pool.query(`SELECT foto, pedido_id FROM fotos WHERE pedido_id = '${id}'`)
-  res.status(200).json(results.rows)
-})
+app.get('/fotos/:id', async (req, res) => {
+  const id = req.params.id;
+  console.log('chegou id: ' + id);
+  
+  const fileName = `${id}.jpg`;
+  const filePath = path.join(__dirname, 'images', fileName);
+  
+  res.sendFile(filePath);
+});
 
 //listen
 
